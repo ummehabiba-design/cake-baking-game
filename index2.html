@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Cake Baking Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #ffe6f0;
+    }
+
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(255,255,255,0.9);
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      background: #ff69b4;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #ff1493;
+      transform: scale(1.05);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #d63384;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+
+<div id="ui">
+  <h2>🎂 Cake Baking Game</h2>
+  <button onclick="addLayer()">Add Cake Layer</button>
+  <button onclick="addCream()">Add Cream</button>
+  <button onclick="addCherry()">Add Cherry</button>
+  <button onclick="resetCake()">Reset</button>
+  <div id="message">Build your cake!</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+  let scene, camera, renderer;
+  let cakeGroup;
+  let layerCount = 0;
+  let creamAdded = false;
+  let cherryAdded = false;
+
+  init();
+  animate();
+
+  function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffd6e7);
+
+    camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 5, 10);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    // Table
+    const tableGeometry = new THREE.CylinderGeometry(6, 6, 1, 32);
+    const tableMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8b4513
+    });
+    const table = new THREE.Mesh(tableGeometry, tableMaterial);
+    table.position.y = -1;
+    scene.add(table);
+
+    // Cake group
+    cakeGroup = new THREE.Group();
+    scene.add(cakeGroup);
+
+    // Floor
+    const floorGeometry = new THREE.PlaneGeometry(50, 50);
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfff0f5,
+      side: THREE.DoubleSide
+    });
+
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = Math.PI / 2;
+    floor.position.y = -1.5;
+    scene.add(floor);
+
+    window.addEventListener('resize', onWindowResize);
+  }
+
+  function addLayer() {
+    if (layerCount >= 5) {
+      setMessage('Maximum cake layers reached!');
+      return;
+    }
+
+    const colors = [0xf5c16c, 0xffb6c1, 0xd8bfd8, 0xffe4b5, 0xffd700];
+
+    const geometry = new THREE.CylinderGeometry(2, 2, 1, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: colors[layerCount % colors.length]
+    });
+
+    const layer = new THREE.Mesh(geometry, material);
+    layer.position.y = layerCount * 1.1;
+
+    cakeGroup.add(layer);
+    layerCount++;
+
+    setMessage('Cake layer added!');
+  }
+
+  function addCream() {
+    if (layerCount === 0) {
+      setMessage('Add a cake layer first!');
+      return;
+    }
+
+    if (creamAdded) {
+      setMessage('Cream already added!');
+      return;
+    }
+
+    const geometry = new THREE.CylinderGeometry(2.1, 2.1, 0.3, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff
+    });
+
+    const cream = new THREE.Mesh(geometry, material);
+    cream.position.y = layerCount * 1.1 - 0.4;
+
+    cakeGroup.add(cream);
+    creamAdded = true;
+
+    setMessage('Cream added!');
+  }
+
+  function addCherry() {
+    if (layerCount === 0) {
+      setMessage('Build the cake first!');
+      return;
+    }
+
+    if (cherryAdded) {
+      setMessage('Cherry already added!');
+      return;
+    }
+
+    const geometry = new THREE.SphereGeometry(0.4, 32, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xff0000
+    });
+
+    const cherry = new THREE.Mesh(geometry, material);
+    cherry.position.y = layerCount * 1.1 + 0.5;
+
+    cakeGroup.add(cherry);
+    cherryAdded = true;
+
+    setMessage('🎉 Cake completed!');
+  }
+
+  function resetCake() {
+    while (cakeGroup.children.length > 0) {
+      cakeGroup.remove(cakeGroup.children[0]);
+    }
+
+    layerCount = 0;
+    creamAdded = false;
+    cherryAdded = false;
+
+    setMessage('Cake reset! Start again.');
+  }
+
+  function setMessage(text) {
+    document.getElementById('message').innerText = text;
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    cakeGroup.rotation.y += 0.005;
+
+    renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+</script>
+
+</body>
+</html>
